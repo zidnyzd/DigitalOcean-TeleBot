@@ -57,6 +57,10 @@ def droplet_detail(call: CallbackQuery, data: dict):
     markup = InlineKeyboardMarkup()
     markup.row(
         InlineKeyboardButton(
+            text='✏️ Rename',
+            callback_data=f'rename_droplet?doc_id={doc_id}&droplet_id={droplet_id}'
+        ),
+        InlineKeyboardButton(
             text='🗑️ Hapus',
             callback_data=f'droplet_actions?doc_id={doc_id}&droplet_id={droplet_id}&a=delete'
         ),

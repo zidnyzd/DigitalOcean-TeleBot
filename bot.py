@@ -42,6 +42,11 @@ def text_handler(m: Message):
             )
             return
 
+        # Check if user is in rename state
+        from modules.rename_droplet import handle_rename_input
+        if handle_rename_input(m):
+            return
+
         if m.text in command_dict.keys():
             globals()[command_dict[m.text]](m)
 
