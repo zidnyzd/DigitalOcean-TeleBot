@@ -16,7 +16,7 @@
 Jalankan perintah berikut di terminal untuk langsung clone dan setup bot ini:
 
 ```bash
-git clone https://github.com/zidnyzd/DigitalOcean-TeleBot.git && cd DigitalOcean-TeleBot && pip install -r requirements.txt
+git clone https://github.com/zidnyzd/DigitalOcean-TeleBot.git && cd DigitalOcean-TeleBot && pip install -r requirements.txt && chmod +x start.sh && ./start.sh
 ```
 
 ---
