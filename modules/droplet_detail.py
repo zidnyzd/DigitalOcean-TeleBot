@@ -61,7 +61,11 @@ def droplet_detail(call: CallbackQuery, data: dict):
             callback_data=f'rename_droplet?doc_id={doc_id}&droplet_id={droplet_id}'
         ),
         InlineKeyboardButton(
-            text='🗑️ Hapus',
+            text='� Resize',
+            callback_data=f'resize_droplet?nf=select_size&doc_id={doc_id}&droplet_id={droplet_id}'
+        ),
+        InlineKeyboardButton(
+            text='�🗑️ Hapus',
             callback_data=f'droplet_actions?doc_id={doc_id}&droplet_id={droplet_id}&a=delete'
         ),
     )

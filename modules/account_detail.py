@@ -17,11 +17,12 @@ def account_detail(call: CallbackQuery, data: dict):
 
     account = AccountsDB().get(doc_id=doc_id)
 
-    msg = bot.send_message(
+    bot.edit_message_text(
         text=f'{t}'
              f'📧 Email: <code>{account["email"]}</code>\n\n'
              f'🔄 Mendapatkan informasi...',
         chat_id=call.from_user.id,
+        message_id=call.message.message_id,
         parse_mode='HTML'
     )
 
@@ -29,21 +30,30 @@ def account_detail(call: CallbackQuery, data: dict):
          f'💬 Komentar: <code>{account["remarks"]}</code>\n' \
          f'📅 Tanggal Ditambahkan: <code>{account["date"]}</code>\n' \
          f'🔑 Token: <code>{account["token"]}</code>\n\n'
+
     markup = InlineKeyboardMarkup()
     markup.row(
         InlineKeyboardButton(
+            text='🔄 Refresh',
+            callback_data=f'account_detail?doc_id={account.doc_id}'
+        ),
+        InlineKeyboardButton(
             text='🗑️ Hapus Akun',
             callback_data=f'delete_account?doc_id={account.doc_id}'
+        ),
+    )
+    markup.row(
+        InlineKeyboardButton(
+            text='🔙 Kembali',
+            callback_data='manage_accounts'
         )
     )
 
     try:
-        account_balance = digitalocean.Balance().get_object(api_token=account['token'])
-
-        t += f'💰 Saldo Akun: <code>{account_balance.account_balance}</code>\n' \
-             f'📊 Penggunaan Bulan Ini: <code>{account_balance.month_to_date_usage}</code>\n' \
-             f'📅 Tanggal Penagihan: <code>{account_balance.generated_at.split("T")[0]}</code>'
-
+        balance = digitalocean.Balance().get_object(api_token=account['token'])
+        t += f'💰 Saldo Akun: <code>{balance.account_balance}</code>\n' \
+             f'📊 Penggunaan Bulan Ini: <code>{balance.month_to_date_usage}</code>\n' \
+             f'📅 Tanggal Penagihan: <code>{balance.generated_at.split("T")[0]}</code>'
     except DataReadError as e:
         t += f'⚠️ Kesalahan Mendapatkan Tagihan: <code>{e}</code>'
     except Exception as e:
@@ -52,7 +62,7 @@ def account_detail(call: CallbackQuery, data: dict):
     bot.edit_message_text(
         text=t,
         chat_id=call.from_user.id,
-        message_id=msg.message_id,
+        message_id=call.message.message_id,
         parse_mode='HTML',
         reply_markup=markup
     )

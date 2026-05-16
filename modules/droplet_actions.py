@@ -1,4 +1,8 @@
-from telebot.types import CallbackQuery
+from telebot.types import (
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 import digitalocean
 
@@ -27,10 +31,35 @@ def droplet_actions(call: CallbackQuery, data: dict):
         return
 
     if action in globals():
-        globals()[action](call, droplet)
+        # Pass doc_id/droplet_id along so handlers can build callback_data.
+        globals()[action](call, droplet, doc_id, droplet_id)
 
 
-def delete(call: CallbackQuery, droplet: digitalocean.Droplet):
+def delete(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
+    """Stage 1: ask for confirmation before destroying the droplet."""
+    markup = InlineKeyboardMarkup()
+    markup.row(
+        InlineKeyboardButton(
+            text='✅ Ya, hapus',
+            callback_data=f'droplet_actions?doc_id={doc_id}&droplet_id={droplet_id}&a=confirm_delete'
+        ),
+        InlineKeyboardButton(
+            text='🔙 Batal',
+            callback_data=f'droplet_detail?doc_id={doc_id}&droplet_id={droplet_id}'
+        ),
+    )
+    bot.edit_message_text(
+        text=f'{call.message.html_text}\n\n'
+             '<b>⚠️ Yakin ingin menghapus droplet ini?</b>\n'
+             'Tindakan ini tidak bisa dibatalkan.',
+        chat_id=call.from_user.id,
+        message_id=call.message.message_id,
+        reply_markup=markup,
+        parse_mode='HTML'
+    )
+
+
+def confirm_delete(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Menghapus droplet...</b>',
@@ -60,7 +89,7 @@ def delete(call: CallbackQuery, droplet: digitalocean.Droplet):
     )
 
 
-def shutdown(call: CallbackQuery, droplet: digitalocean.Droplet):
+def shutdown(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Mematikan droplet, silakan segarkan nanti</b>',
@@ -82,7 +111,7 @@ def shutdown(call: CallbackQuery, droplet: digitalocean.Droplet):
         )
 
 
-def reboot(call: CallbackQuery, droplet: digitalocean.Droplet):
+def reboot(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Merestart droplet, silakan segarkan nanti</b>',
@@ -104,7 +133,7 @@ def reboot(call: CallbackQuery, droplet: digitalocean.Droplet):
         )
 
 
-def power_on(call: CallbackQuery, droplet: digitalocean.Droplet):
+def power_on(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Menyalakan droplet, silakan segarkan nanti</b>',
@@ -124,7 +153,9 @@ def power_on(call: CallbackQuery, droplet: digitalocean.Droplet):
             message_id=call.message.message_id,
             parse_mode='HTML'
         )
-def rebuild(call: CallbackQuery, droplet: digitalocean.Droplet):
+
+
+def rebuild(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Membangun ulang droplet, silakan segarkan nanti</b>',
@@ -137,7 +168,6 @@ def rebuild(call: CallbackQuery, droplet: digitalocean.Droplet):
     try:
         droplet.load()
         droplet.rebuild()
-
     except Exception as e:
         bot.edit_message_text(
             text=f'⚠️ Kesalahan saat membangun ulang droplet: <code>{str(e)}</code>',
@@ -149,13 +179,15 @@ def rebuild(call: CallbackQuery, droplet: digitalocean.Droplet):
 
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
-             f'<b>✅ Droplet telah dibangun ulang</b>\n'
-             f'🔑 Password baru dikirim ke email',
+             f'<b>✅ Droplet sedang dibangun ulang</b>\n'
+             f'Status akhir bisa dicek lewat tombol Refresh.',
         chat_id=call.from_user.id,
         message_id=call.message.message_id,
         parse_mode='HTML'
     )
-def reset_password(call: CallbackQuery, droplet: digitalocean.Droplet):
+
+
+def reset_password(call: CallbackQuery, droplet: digitalocean.Droplet, doc_id: str, droplet_id: str):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Mereset password droplet, silakan segarkan nanti</b>',
@@ -180,7 +212,7 @@ def reset_password(call: CallbackQuery, droplet: digitalocean.Droplet):
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              f'<b>✅ Password droplet telah direset</b>\n'
-             f'🔑 Password baru dikirim ke email',
+             f'🔑 Password baru dikirim ke email akun DigitalOcean',
         chat_id=call.from_user.id,
         message_id=call.message.message_id,
         parse_mode='HTML'

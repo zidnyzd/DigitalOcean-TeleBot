@@ -307,6 +307,7 @@ def ask_create(m: Message):
 
 
 def cancel_create(call: CallbackQuery):
+    user_dict.pop(call.from_user.id, None)
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>❌ Membatalkan</b>',
@@ -320,6 +321,17 @@ def confirm_create(call: CallbackQuery, data: dict):
     droplet_name = data['name'][0]
     password = password_generator()
 
+    state = user_dict.get(call.from_user.id)
+    if state is None:
+        bot.edit_message_text(
+            text=f'{call.message.html_text}\n\n'
+                 '⚠️ Sesi pembuatan tidak ditemukan. Silakan mulai ulang dengan /add_vps.',
+            chat_id=call.from_user.id,
+            message_id=call.message.message_id,
+            parse_mode='HTML'
+        )
+        return
+
     bot.edit_message_text(
         text=f'{call.message.html_text}\n\n'
              '<b>🔄 Membuat Instance...</b>',
@@ -327,29 +339,20 @@ def confirm_create(call: CallbackQuery, data: dict):
         message_id=call.message.message_id,
         parse_mode='HTML'
     )
+
+    droplet = digitalocean.Droplet(
+        token=state['account']['token'],
+        name=droplet_name,
+        region=state['region_slug'],
+        image=state['image_slug'],
+        size_slug=state['size_slug'],
+        user_data=set_root_password_script(password)
+    )
+
     try:
-        droplet = digitalocean.Droplet(
-            token=user_dict[call.from_user.id]['account']['token'],
-            name=droplet_name,
-            region=user_dict[call.from_user.id]['region_slug'],
-            image=user_dict[call.from_user.id]['image_slug'],
-            size_slug=user_dict[call.from_user.id]['size_slug'],
-            user_data=set_root_password_script(password)
-        )
         droplet.create()
-
-        droplet_actions = droplet.get_actions()
-        for action in droplet_actions:
-            while action.status != 'completed':
-                sleep(3)
-                action.load()
-        droplet.load()
-
-        # Menunggu IP address siap
-        while not droplet.ip_address:
-            sleep(3)
-            droplet.load()
     except Exception as e:
+        user_dict.pop(call.from_user.id, None)
         bot.edit_message_text(
             text=f'{call.message.html_text}\n\n'
                  '⚠️ Kesalahan saat membuat Instance: '
@@ -360,23 +363,50 @@ def confirm_create(call: CallbackQuery, data: dict):
         )
         return
 
-    markup = InlineKeyboardMarkup()
-    markup.row(
+    # Droplet sudah terlanjur dibuat. Mulai dari sini, error apapun tetap
+    # harus mengembalikan referensi ke droplet agar user bisa kelola/hapus.
+    doc_id = state['account'].doc_id
+    detail_markup = InlineKeyboardMarkup()
+    detail_markup.row(
         InlineKeyboardButton(
             text='🔍 Periksa Detailnya',
-            callback_data=f'droplet_detail?'
-                          f'doc_id={user_dict[call.from_user.id]["account"].doc_id}&'
-                          f'droplet_id={droplet.id}'
+            callback_data=f'droplet_detail?doc_id={doc_id}&droplet_id={droplet.id}'
         )
     )
 
+    try:
+        for action in droplet.get_actions():
+            while action.status != 'completed':
+                sleep(3)
+                action.load()
+        droplet.load()
+
+        while not droplet.ip_address:
+            sleep(3)
+            droplet.load()
+    except Exception as e:
+        user_dict.pop(call.from_user.id, None)
+        bot.edit_message_text(
+            text=f'{call.message.html_text}\n'
+                 f'🆔 Droplet ID: <code>{droplet.id}</code>\n'
+                 f'🔑 Kata Sandi: <code>{password}</code>\n\n'
+                 '⚠️ Droplet sudah dibuat namun gagal mengambil status akhir: '
+                 f'<code>{str(e)}</code>',
+            chat_id=call.from_user.id,
+            message_id=call.message.message_id,
+            reply_markup=detail_markup,
+            parse_mode='HTML'
+        )
+        return
+
+    user_dict.pop(call.from_user.id, None)
     bot.edit_message_text(
         text=f'{call.message.html_text}\n'
              f'🌐 IP: <code>{droplet.ip_address}</code>\n'
              f'🔑 Kata Sandi: <code>{password}</code>\n\n'
              '<b>✅ Pembuatan Server Selesai</b>',
         chat_id=call.from_user.id,
-        reply_markup=markup,
+        reply_markup=detail_markup,
         message_id=call.message.message_id,
         parse_mode='HTML'
     )
