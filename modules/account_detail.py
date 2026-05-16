@@ -9,6 +9,7 @@ from digitalocean import DataReadError
 
 from _bot import bot
 from utils.db import AccountsDB
+from utils.account_status import count_droplets, credit_label
 
 
 def account_detail(call: CallbackQuery, data: dict):
@@ -51,10 +52,18 @@ def account_detail(call: CallbackQuery, data: dict):
 
     try:
         balance = digitalocean.Balance().get_object(api_token=account['token'])
+        droplet_count = count_droplets(account['token'])
+        status = credit_label(
+            balance.account_balance,
+            balance.month_to_date_usage,
+            droplet_count,
+        )
         t += f'💰 Saldo Akun: <code>{balance.account_balance}</code>\n' \
              f'📊 Penggunaan Bulan Ini: <code>{balance.month_to_date_usage}</code>\n' \
              f'💵 Saldo Sekarang: <code>{balance.month_to_date_balance}</code>\n' \
-             f'📅 Tanggal Penagihan: <code>{balance.generated_at.split("T")[0]}</code>'
+             f'📅 Tanggal Penagihan: <code>{balance.generated_at.split("T")[0]}</code>\n' \
+             f'🧾 Status: {status}\n\n' \
+             '<a href="https://cloud.digitalocean.com/account/billing">Buka Billing di Dashboard</a>'
     except DataReadError as e:
         t += f'⚠️ Kesalahan Mendapatkan Tagihan: <code>{e}</code>'
     except Exception as e:
@@ -65,5 +74,6 @@ def account_detail(call: CallbackQuery, data: dict):
         chat_id=call.from_user.id,
         message_id=call.message.message_id,
         parse_mode='HTML',
-        reply_markup=markup
+        reply_markup=markup,
+        disable_web_page_preview=True
     )

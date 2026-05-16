@@ -13,6 +13,7 @@ from digitalocean import DataReadError
 
 from _bot import bot
 from utils.db import AccountsDB
+from utils.account_status import count_droplets, credit_label
 
 
 def batch_test_accounts(d: Union[Message, CallbackQuery]):
@@ -34,6 +35,7 @@ def batch_test_accounts(d: Union[Message, CallbackQuery]):
         try:
             account_balance = digitalocean.Balance().get_object(api_token=account['token'])
             account_balance.email = account['email']
+            account_balance.droplet_count = count_droplets(account['token'])
 
             checked_accounts.append(account_balance)
 
@@ -53,11 +55,17 @@ def batch_test_accounts(d: Union[Message, CallbackQuery]):
 
     if checked_accounts:
         t += f'✅ Tes Berhasil {len(checked_accounts)} akun:\n'
-        for account_balance in checked_accounts:
+        for ab in checked_accounts:
+            status = credit_label(
+                ab.account_balance,
+                ab.month_to_date_usage,
+                ab.droplet_count,
+            )
             t += (
-                f'<code>{account_balance.email}</code> | '
-                f'Saldo: <code>{account_balance.account_balance}</code> | '
-                f'Sekarang: <code>{account_balance.month_to_date_balance}</code>\n'
+                f'<code>{ab.email}</code> | '
+                f'Saldo: <code>{ab.account_balance}</code> | '
+                f'Sekarang: <code>{ab.month_to_date_balance}</code> | '
+                f'{status}\n'
             )
         t += '\n'
 
