@@ -54,7 +54,11 @@ def batch_test_accounts(d: Union[Message, CallbackQuery]):
     if checked_accounts:
         t += f'✅ Tes Berhasil {len(checked_accounts)} akun:\n'
         for account_balance in checked_accounts:
-            t += f'<code>{account_balance.email}</code> | Saldo: <code>{account_balance.account_balance}</code>\n'
+            t += (
+                f'<code>{account_balance.email}</code> | '
+                f'Saldo: <code>{account_balance.account_balance}</code> | '
+                f'Sekarang: <code>{account_balance.month_to_date_balance}</code>\n'
+            )
         t += '\n'
 
     if failed_accounts:

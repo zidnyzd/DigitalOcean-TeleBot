@@ -53,6 +53,7 @@ def account_detail(call: CallbackQuery, data: dict):
         balance = digitalocean.Balance().get_object(api_token=account['token'])
         t += f'💰 Saldo Akun: <code>{balance.account_balance}</code>\n' \
              f'📊 Penggunaan Bulan Ini: <code>{balance.month_to_date_usage}</code>\n' \
+             f'💵 Saldo Sekarang: <code>{balance.month_to_date_balance}</code>\n' \
              f'📅 Tanggal Penagihan: <code>{balance.generated_at.split("T")[0]}</code>'
     except DataReadError as e:
         t += f'⚠️ Kesalahan Mendapatkan Tagihan: <code>{e}</code>'
